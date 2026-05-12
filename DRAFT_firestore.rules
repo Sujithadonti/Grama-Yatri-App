@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'sdonti19@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidRoute(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && (data.get('description', '') is string && data.get('description', '').size() <= 500);
+    }
+
+    function isValidStop(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.order is int && data.order >= 0
+          && (data.get('avgTravelTimeFromPrev', 0) is int && data.get('avgTravelTimeFromPrev', 0) >= 0);
+    }
+
+    function isValidReport(data) {
+      return data.routeId is string && isValidId(data.routeId)
+          && data.stopId is string && isValidId(data.stopId)
+          && data.type in ['ARRIVED', 'PASSED', 'ON_BUS']
+          && data.timestamp is timestamp
+          && data.reporterName is string && data.reporterName.size() <= 100
+          && data.userId == request.auth.uid;
+    }
+
+    function isValidAlert(data) {
+      return data.routeId is string && isValidId(data.routeId)
+          && data.message is string && data.message.size() > 0 && data.message.size() <= 500
+          && data.timestamp is timestamp
+          && data.reporterName is string && data.reporterName.size() <= 100
+          && data.userId == request.auth.uid;
+    }
+
+    // --- Collection Rules ---
+
+    // Routes are public knowledge
+    match /routes/{routeId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidRoute(incoming());
+      allow delete: if isAdmin();
+
+      match /stops/{stopId} {
+        allow read: if true;
+        allow create, update: if isAdmin() && isValidStop(incoming());
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Reports are public to read, but authenticated to create
+    match /reports/{reportId} {
+      allow list: if true; // Public list
+      allow get: if true;
+      allow create: if isSignedIn() && isValidReport(incoming()) 
+                     && exists(/databases/$(database)/documents/routes/$(incoming().routeId));
+      allow update: if isOwner(existing().userId) && isValidReport(incoming())
+                     && incoming().userId == existing().userId;
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    // Alerts are public to read
+    match /alerts/{alertId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn() && isValidAlert(incoming())
+                     && exists(/databases/$(database)/documents/routes/$(incoming().routeId));
+      allow update: if isOwner(existing().userId) && isValidAlert(incoming())
+                     && incoming().userId == existing().userId;
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+  }
+}

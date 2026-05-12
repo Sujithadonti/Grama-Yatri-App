@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Route": {
+      "title": "Route",
+      "description": "A bus route containing multiple stops.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Stop": {
+      "title": "Stop",
+      "description": "A stop or village on a route.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "order": { "type": "integer" },
+        "avgTravelTimeFromPrev": { "type": "integer", "description": "Minutes from previous stop" }
+      },
+      "required": ["name", "order"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A crowdsourced bus status report.",
+      "type": "object",
+      "properties": {
+        "routeId": { "type": "string" },
+        "stopId": { "type": "string" },
+        "type": { "enum": ["ARRIVED", "PASSED", "ON_BUS"] },
+        "crowdLevel": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "reporterName": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["routeId", "stopId", "type", "timestamp", "reporterName", "userId"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "A service alert reported by a user.",
+      "type": "object",
+      "properties": {
+        "routeId": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "reporterName": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["routeId", "message", "timestamp", "reporterName", "userId"]
+    }
+  },
+  "firestore": {
+    "/routes/{routeId}": {
+      "schema": "Route",
+      "description": "Bus routes."
+    },
+    "/routes/{routeId}/stops/{stopId}": {
+      "schema": "Stop",
+      "description": "Stops on a specific route."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Bus pings and reports."
+    },
+    "/alerts/{alertId}": {
+      "schema": "Alert",
+      "description": "Route alerts."
+    }
+  }
+}

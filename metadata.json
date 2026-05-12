@@ -1,0 +1,6 @@
+{
+  "name": "Grama-Yatri",
+  "description": "A crowdsourced real-time bus tracker for rural mobility, enabling villagers to share bus locations and predict arrival times.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
